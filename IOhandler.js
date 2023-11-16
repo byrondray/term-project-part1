@@ -160,7 +160,7 @@ const getOutputPath = (filterType, filename) => {
     case "sepia":
       return path.join(__dirname, "sepia", filename);
     default:
-      return null;
+      throw new Error("Please enter grayscale or sepia");
   }
 };
 
