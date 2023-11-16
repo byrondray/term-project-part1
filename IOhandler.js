@@ -15,25 +15,17 @@ const { pipeline } = require("stream"),
   AdmZip = require("adm-zip"),
   path = require("path");
 
-/**
- * Description: decompress file from given pathIn, write to given pathOut
- *
- * @param {string} pathIn
- * @param {string} pathOut
- * @return {promise}
- */
-
-function readOrCreateDir(dirPath) {
+const checkExistsAndCreateFolder = (dirPath) => {
   return fs.readdir(dirPath).catch((err) => {
     if (err.code === "ENOENT") {
       return fs.mkdir(dirPath, { recursive: true }).then(() => []);
     }
     throw err;
   });
-}
+};
 
 const unzip = (pathIn, pathOut) => {
-  return readOrCreateDir(pathOut)
+  return checkExistsAndCreateFolder(pathOut)
     .then(() => {
       return new Promise((resolve, reject) => {
         try {
@@ -52,12 +44,6 @@ const unzip = (pathIn, pathOut) => {
     });
 };
 
-/**
- * Description: read all the png files from given directory and return Promise containing array of each png file path
- *
- * @param {string} path
- * @return {promise}
- */
 const filterPngFiles = (files) => {
   return files.filter((file) => path.extname(file) === ".png");
 };
@@ -73,19 +59,11 @@ const readDir = (dir) => {
     .then((pngFiles) => getFullPaths(dir, pngFiles));
 };
 
-/**
- * Description: Read in png file by given pathIn,
- * convert to grayscale and write to given pathOut
- *
- * @param {string} filePath
- * @param {string} pathProcessed
- * @return {promise}
- */
-function readImage(path) {
+const readImage = (path) => {
   return createReadStream(path);
-}
+};
 
-function writeImage(png, pathOut) {
+const writeImage = (png, pathOut) => {
   return new Promise((resolve, reject) => {
     pipeline(png.pack(), createWriteStream(pathOut), (err) => {
       if (err) {
@@ -95,9 +73,9 @@ function writeImage(png, pathOut) {
       }
     });
   });
-}
+};
 
-function convertToGrayscale(png) {
+const convertToGrayscale = (png) => {
   return new Promise((resolve, reject) => {
     for (let y = 0; y < png.height; y++) {
       for (let x = 0; x < png.width; x++) {
@@ -113,17 +91,55 @@ function convertToGrayscale(png) {
     }
     resolve(png);
   });
-}
+};
 
-const grayScale = (pathIn, pathOut) => {
+const convertToSepia = (png) => {
   return new Promise((resolve, reject) => {
+    for (let y = 0; y < png.height; y++) {
+      for (let x = 0; x < png.width; x++) {
+        let idx = (png.width * y + x) << 2;
+        let red = png.data[idx];
+        let green = png.data[idx + 1];
+        let blue = png.data[idx + 2];
+
+        let sepiaRed = 0.393 * red + 0.769 * green + 0.189 * blue;
+        let sepiaGreen = 0.349 * red + 0.686 * green + 0.168 * blue;
+        let sepiaBlue = 0.272 * red + 0.534 * green + 0.131 * blue;
+
+        png.data[idx] = sepiaRed > 255 ? 255 : sepiaRed;
+        png.data[idx + 1] = sepiaGreen > 255 ? 255 : sepiaGreen;
+        png.data[idx + 2] = sepiaBlue > 255 ? 255 : sepiaBlue;
+      }
+    }
+    resolve(png);
+  });
+};
+
+const applyFilter = (png, filterType) => {
+  switch (filterType) {
+    case "grayscale":
+      return convertToGrayscale(png);
+    case "sepia":
+      return convertToSepia(png);
+    default:
+      return Promise.reject(new Error("Unknown filter type"));
+  }
+};
+
+const chooseFilter = (pathIn, filterType) => {
+  return new Promise((resolve, reject) => {
+    const outputFilename = path.basename(pathIn);
+    let outputPath;
+
+    outputPath = getOutputPath(filterType, outputFilename);
+
     const readStream = readImage(pathIn);
     const pngStream = new PNG({});
 
-    pngStream.once("parsed", function () {
-      convertToGrayscale(this)
-        .then((grayscaleData) => {
-          return writeImage(grayscaleData, pathOut);
+    pngStream.on("parsed", function () {
+      applyFilter(this, filterType)
+        .then((filterApplied) => {
+          return writeImage(filterApplied, outputPath);
         })
         .then(resolve)
         .catch(reject);
@@ -137,8 +153,19 @@ const grayScale = (pathIn, pathOut) => {
   });
 };
 
+const getOutputPath = (filterType, inputFilename) => {
+  switch (filterType) {
+    case "grayscale":
+      return path.join(__dirname, "grayscaled", inputFilename);
+    case "sepia":
+      return path.join(__dirname, "sepia", inputFilename);
+    default:
+      return null;
+  }
+};
+
 module.exports = {
   unzip,
   readDir,
-  grayScale,
+  chooseFilter,
 };
