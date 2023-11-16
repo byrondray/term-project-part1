@@ -22,7 +22,7 @@ unzip(zipFilePath, pathUnzipped)
   .then(() => readDir(pathUnzipped))
   .then((imgs) => {
     const promises = imgs.map((img) => {
-      chooseFilter(img, "sepia");
+      chooseFilter(img, "grayscale");
     });
     Promise.all(promises);
   })

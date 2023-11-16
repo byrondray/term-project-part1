@@ -153,12 +153,12 @@ const chooseFilter = (pathIn, filterType) => {
   });
 };
 
-const getOutputPath = (filterType, inputFilename) => {
+const getOutputPath = (filterType, filename) => {
   switch (filterType) {
     case "grayscale":
-      return path.join(__dirname, "grayscaled", inputFilename);
+      return path.join(__dirname, "grayscaled", filename);
     case "sepia":
-      return path.join(__dirname, "sepia", inputFilename);
+      return path.join(__dirname, "sepia", filename);
     default:
       return null;
   }
