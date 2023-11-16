@@ -122,7 +122,7 @@ const applyFilter = (png, filterType) => {
     case "sepia":
       return convertToSepia(png);
     default:
-      return Promise.reject(new Error("Unknown filter type"));
+      throw new Error("Please enter grayscale or sepia");
   }
 };
 
