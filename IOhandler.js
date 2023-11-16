@@ -1,10 +1,10 @@
 /*
  * Project: Milestone 1
  * File Name: IOhandler.js
- * Description: Collection of functions for files input/output related operations
+ * Description: This program unzips a folder, takes only the images and then applies a filter to those images.
  *
- * Created Date:
- * Author:
+ * Created Date: November 2, 2023
+ * Author: Byron Dray
  *
  */
 
